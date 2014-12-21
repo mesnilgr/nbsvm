@@ -3,9 +3,7 @@ import pdb
 from collections import Counter
 import numpy as np
 
-NGRAMS = [1, 2, 3]
-
-def tokenize(sentence, grams=NGRAMS):
+def tokenize(sentence, grams):
     words = sentence.split()
     tokens = []
     for gram in grams:
@@ -13,18 +11,17 @@ def tokenize(sentence, grams=NGRAMS):
             tokens += ["_*_".join(words[i:i+gram])]
     return tokens
 
-def build_dict(file_list):
+def build_dict(f, grams):
     dic = Counter()
-    for f in file_list:
-        for sentence in open(f).xreadlines():
-            dic.update(tokenize(sentence))
+    for sentence in open(f).xreadlines():
+        dic.update(tokenize(sentence, grams))
     return dic
 
-def process_files(file_pos, file_neg, dic, r, outfn):
+def process_files(file_pos, file_neg, dic, r, outfn, grams):
     output = []
     for beg_line, f in zip([1, -1], [file_pos, file_neg]):
         for l in open(f).xreadlines():
-            tokens = tokenize(l)
+            tokens = tokenize(l, grams)
             indexes = []
             for t in tokens:
                 try:
@@ -42,69 +39,42 @@ def process_files(file_pos, file_neg, dic, r, outfn):
     f.writelines(output)
     f.close()
 
+def compute_ratio(poscounts, negcounts, alpha=1):
+    alltokens = list(set(poscounts.keys() + negcounts.keys()))
+    dic = dict((t, i) for i, t in enumerate(alltokens))
+    d = len(dic)
+    print "computing r..."
+    p, q = np.ones(d) * alpha , np.ones(d) * alpha
+    for t in alltokens:
+        p[dic[t]] += poscounts[t]
+        q[dic[t]] += negcounts[t]
+    p /= abs(p).sum()
+    q /= abs(q).sum()
+    r = np.log(p/q)
+    return dic, r
         
 if __name__ == "__main__":
-    valid = True
-    alpha = 1
+    grams = [1, 2, 3] 
+    # liblinear PATH
+    # train pos file + NEG same for valid
+    train_neg = "train-neg.txt"
+    train_pos = "train-pos.txt"
+    test_neg = "test-neg.txt"
+    test_pos = "test-pos.txt"
+
+    print "counting..."
+    poscounts = build_dict(train_pos, grams)         
+    negcounts = build_dict(train_neg, grams)         
+    
+    dic, r = compute_ratio(poscounts, negcounts)
+    print "processing files..."
+    process_files(train_pos, train_neg, dic, r, "train-nbsvm.txt", grams)
+    process_files(test_pos, test_neg, dic, r, "test-nbsvm.txt", grams)
    
-    if not valid:
-        train_files = ["train-pos.txt", "train-neg.txt"]
-        test_files = ["test-pos.txt", "test-neg.txt"]
+    os.system("mv train-nbsvm.txt test-nbsvm.txt word2vec") 
 
-        print "counting..."
-        poscounts = build_dict(train_files[:1])         
-        negcounts = build_dict(train_files[1:])         
-        alltokens = list(set(poscounts.keys() + negcounts.keys()))
-        dic = dict((t, i) for i, t in enumerate(alltokens))
-        d = len(dic)
+    os.chdir("word2vec")
+    os.system("./liblinear-1.94/train -s 0 train-nbsvm.txt model.logreg")
+    os.system("./liblinear-1.94/predict -b 1 test-nbsvm.txt model.logreg NBSVM-TEST")
+    os.chdir("./..")
 
-        print "computing r..."
-        p, q = np.ones(d) * alpha , np.ones(d) * alpha
-        for t in alltokens:
-            p[dic[t]] += poscounts[t]
-            q[dic[t]] += negcounts[t]
-        p /= abs(p).sum()
-        q /= abs(q).sum()
-        r = np.log(p/q)
-
-        print "processing files..."
-        process_files(train_files[0], train_files[1], dic, r, "train-nbsvm.txt")
-        process_files(test_files[0], test_files[1], dic, r, "test-nbsvm.txt")
-       
-        os.system("mv train-nbsvm.txt test-nbsvm.txt word2vec") 
-
-        os.chdir("word2vec")
-        os.system("./liblinear-1.94/train -s 0 train-nbsvm.txt model.logreg")
-        os.system("./liblinear-1.94/predict -b 1 test-nbsvm.txt model.logreg NBSVM-TEST")
-        os.chdir("./..")
-    else:
-        train_files = ["train-pos-small.txt", "train-neg-small.txt"]
-        valid_files = ["valid-pos.txt", "valid-neg.txt"]
-        test_files = ["test-pos.txt", "test-neg.txt"]
-
-        print "counting..."
-        poscounts = build_dict(train_files[:1])         
-        negcounts = build_dict(train_files[1:])         
-        alltokens = list(set(poscounts.keys() + negcounts.keys()))
-        dic = dict((t, i) for i, t in enumerate(alltokens))
-        d = len(dic)
-
-        print "computing r..."
-        p, q = np.ones(d) * alpha , np.ones(d) * alpha
-        for t in alltokens:
-            p[dic[t]] += poscounts[t]
-            q[dic[t]] += negcounts[t]
-        p /= abs(p).sum()
-        q /= abs(q).sum()
-        r = np.log(p/q)
-
-        print "processing files..."
-        process_files(train_files[0], train_files[1], dic, r, "train-nbsvm.txt")
-        process_files(valid_files[0], valid_files[1], dic, r, "valid-nbsvm.txt")
-       
-        os.system("mv train-nbsvm.txt valid-nbsvm.txt word2vec") 
-
-        os.chdir("word2vec")
-        os.system("./liblinear-1.94/train -s 0 train-nbsvm.txt model.logreg")
-        os.system("./liblinear-1.94/predict -b 1 valid-nbsvm.txt model.logreg NBSVM-VALID")
-        os.chdir("./..")
