@@ -24,7 +24,6 @@ mv aclImdb/train/pos/norm.txt data/train-pos.txt
 mv aclImdb/train/neg/norm.txt data/train-neg.txt
 mv aclImdb/test/pos/norm.txt data/test-pos.txt
 mv aclImdb/test/neg/norm.txt data/test-neg.txt
-cd ..
 rm -r aclImdb
 
 wget http://www.csie.ntu.edu.tw/~cjlin/liblinear/liblinear-1.96.zip
