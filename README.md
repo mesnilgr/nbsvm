@@ -12,6 +12,7 @@ Little improvements (+0.33% with bigrams and +0.6% with unigrams) versus the pap
 
 To reproduce the results:
 
-.. code-block::
-    chmod +x go.sh
-    ./go.sh
+```
+chmod +x go.sh
+./go.sh
+```
