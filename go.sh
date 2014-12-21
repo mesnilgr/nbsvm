@@ -5,10 +5,12 @@ function normalize_text {
   -e 's/\;/ \; /g' -e 's/\:/ \: /g' > $1-norm
 }
 
+cd ..
 mkdir nbsvm_run; cd nbsvm_run
 
 wget http://ai.stanford.edu/~amaas/data/sentiment/aclImdb_v1.tar.gz
 tar -xvf aclImdb_v1.tar.gz
+rm aclImdb_v1.tar.gz
 
 for j in train/pos train/neg test/pos test/neg train/unsup; do
   for i in `ls aclImdb/$j`; do cat aclImdb/$j/$i >> temp; awk 'BEGIN{print;}' >> temp; done
@@ -23,6 +25,17 @@ mv aclImdb/train/neg/norm.txt data/train-neg.txt
 mv aclImdb/test/pos/norm.txt data/test-pos.txt
 mv aclImdb/test/neg/norm.txt data/test-neg.txt
 cd ..
+rm -r aclImdb
 
-python nbsvm.py --liblinear ../liblinear-1.96 --ptrain ../data/train-pos.txt --ntrain ../data/train-neg.txt --ptest ../data/test-pos.txt --ntest ../data/test-neg.txt --ngram 123 --out ../scores/NBSVM-TEST
+wget http://www.csie.ntu.edu.tw/~cjlin/liblinear/liblinear-1.96.zip
+unzip liblinear-1.96.zip
+rm liblinear-1.96.zip
+cd liblinear-1.96
+make
 cd ..
+
+echo "BI-GRAM";
+python ../nbsvm/nbsvm.py --liblinear liblinear-1.96 --ptrain data/train-pos.txt --ntrain data/train-neg.txt --ptest data/test-pos.txt --ntest data/test-neg.txt --ngram 12 --out NBSVM-TEST-BIGRAM
+echo "TRI-GRAM";
+python ../nbsvm/nbsvm.py --liblinear liblinear-1.96 --ptrain data/train-pos.txt --ntrain data/train-neg.txt --ptest data/test-pos.txt --ntest data/test-neg.txt --ngram 123 --out NBSVM-TEST-TRIGRAM
+cd ../nbsvm
