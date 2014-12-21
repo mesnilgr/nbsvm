@@ -1,7 +1,8 @@
 import os
 import pdb
-from collections import Counter
 import numpy as np
+import argparse
+from collections import Counter
 
 def tokenize(sentence, grams):
     words = sentence.split()
@@ -19,7 +20,7 @@ def build_dict(f, grams):
 
 def process_files(file_pos, file_neg, dic, r, outfn, grams):
     output = []
-    for beg_line, f in zip([1, -1], [file_pos, file_neg]):
+    for beg_line, f in zip(["1", "-1"], [file_pos, file_neg]):
         for l in open(f).xreadlines():
             tokens = tokenize(l, grams)
             indexes = []
@@ -52,29 +53,44 @@ def compute_ratio(poscounts, negcounts, alpha=1):
     q /= abs(q).sum()
     r = np.log(p/q)
     return dic, r
-        
-if __name__ == "__main__":
-    grams = [1, 2, 3] 
-    # liblinear PATH
-    # train pos file + NEG same for valid
-    train_neg = "train-neg.txt"
-    train_pos = "train-pos.txt"
-    test_neg = "test-neg.txt"
-    test_pos = "test-pos.txt"
-
+ 
+def main(ptrain, ntrain, ptest, ntest, out, liblinear, ngram):
+    ngram = [int(i) for i in ngram]
     print "counting..."
-    poscounts = build_dict(train_pos, grams)         
-    negcounts = build_dict(train_neg, grams)         
+    poscounts = build_dict(ntrain, ngram)         
+    negcounts = build_dict(ptrain, ngram)         
     
     dic, r = compute_ratio(poscounts, negcounts)
     print "processing files..."
-    process_files(train_pos, train_neg, dic, r, "train-nbsvm.txt", grams)
-    process_files(test_pos, test_neg, dic, r, "test-nbsvm.txt", grams)
-   
-    os.system("mv train-nbsvm.txt test-nbsvm.txt word2vec") 
+    process_files(ptrain, ntrain, dic, r, "train-nbsvm.txt", ngram)
+    process_files(ptest, ntest, dic, r, "test-nbsvm.txt", ngram)
+    
+    trainsvm = os.path.join(liblinear, "train") 
+    predictsvm = os.path.join(liblinear, "predict") 
+    os.system(trainsvm + " -s 0 train-nbsvm.txt model.logreg")
+    os.system(predictsvm + " -b 1 test-nbsvm.txt model.logreg " + out)
+    os.system("rm model.logreg train-nbsvm.txt test-nbsvm.txt")
+        
+if __name__ == "__main__":
+    """
+    Usage :
 
-    os.chdir("word2vec")
-    os.system("./liblinear-1.94/train -s 0 train-nbsvm.txt model.logreg")
-    os.system("./liblinear-1.94/predict -b 1 test-nbsvm.txt model.logreg NBSVM-TEST")
-    os.chdir("./..")
+    python nbsvm.py --liblinear /PATH/liblinear-1.96\
+        --ptrain /PATH/data/full-train-pos.txt\
+        --ntrain /PATH/data/full-train-neg.txt\
+        --ptest /PATH/data/test-pos.txt\
+        --ntest /PATH/data/test-neg.txt\
+         --ngram 123 --out TEST-SCORE
+    """
 
+    parser = argparse.ArgumentParser(description='Run NB-SVM on some text files.')
+    parser.add_argument('--liblinear', help='path of liblinear install e.g. */liblinear-1.96')
+    parser.add_argument('--ptrain', help='path of the text file TRAIN POSITIVE')
+    parser.add_argument('--ntrain', help='path of the text file TRAIN NEGATIVE')
+    parser.add_argument('--ptest', help='path of the text file TEST POSITIVE')
+    parser.add_argument('--ntest', help='path of the text file TEST NEGATIVE')
+    parser.add_argument('--out', help='path and fileename for score output')
+    parser.add_argument('--ngram', help='N-grams considered e.g. 123 is uni+bi+tri-grams')
+    args = vars(parser.parse_args())
+
+    main(**args)
