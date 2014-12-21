@@ -16,3 +16,6 @@ To reproduce the results:
 chmod +x go.sh
 ./go.sh
 ```
+
+End to end, this will take XX mins. Note that once the data has been downloaded
+and tokenized, training an NB-SVM only takes XX secs.
