@@ -17,5 +17,7 @@ chmod +x go.sh
 ./go.sh
 ```
 
-End to end, this will take XX mins. Note that once the data has been downloaded
-and tokenized, training an NB-SVM only takes XX secs.
+End to end (downloading the data, tokenizing, training the models), this will
+take 68 mins. Note that most of the time is spent dowloading and tokenizing.
+Once the data has been downloaded and tokenized, training an NB-SVM only takes
+~2 mins for uni+bigrams and <5 mins for uni+bi+trigrams.
