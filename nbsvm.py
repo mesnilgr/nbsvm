@@ -57,8 +57,8 @@ def compute_ratio(poscounts, negcounts, alpha=1):
 def main(ptrain, ntrain, ptest, ntest, out, liblinear, ngram):
     ngram = [int(i) for i in ngram]
     print "counting..."
-    poscounts = build_dict(ntrain, ngram)         
-    negcounts = build_dict(ptrain, ngram)         
+    poscounts = build_dict(ptrain, ngram)         
+    negcounts = build_dict(ntrain, ngram)         
     
     dic, r = compute_ratio(poscounts, negcounts)
     print "processing files..."
