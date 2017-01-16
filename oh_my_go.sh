@@ -12,7 +12,7 @@ wget http://ai.stanford.edu/~amaas/data/sentiment/aclImdb_v1.tar.gz
 tar -xvf aclImdb_v1.tar.gz
 rm aclImdb_v1.tar.gz
 
-for j in train/pos train/neg test/pos test/neg train/unsup; do
+for j in train/pos train/neg test/pos test/neg; do
   for i in `ls aclImdb/$j`; do cat aclImdb/$j/$i >> temp; awk 'BEGIN{print;}' >> temp; done
   normalize_text temp
   mv temp-norm aclImdb/$j/norm.txt
